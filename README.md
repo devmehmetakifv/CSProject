@@ -1,4 +1,4 @@
-# İŞ BULDUR - ASP.NET Core 8 MVC
+# İş Buldur - ASP.NET Core 8 MVC
 
 Bu proje, **ASP.NET Core 8 MVC** kullanılarak geliştirilmiş bir **iş bulma sitesi**dir. Kullanıcılar iş ilanlarını yayınlayabilir, başvurabilir ve şirketler adaylarla iletişime geçebilir.
 
@@ -18,12 +18,6 @@ Bu proje, **ASP.NET Core 8 MVC** kullanılarak geliştirilmiş bir **iş bulma s
 - **Veritabanı:** MySql Server
 - **Kimlik Doğrulama:** ASP.NET Identity
 - **Versiyon Kontrol:** Git & GitHub
-
-## ⚙ Kurulum
-
-
-
-
 
 ## 🎨 Ekran Görüntüleri
 
