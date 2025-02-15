@@ -1,0 +1,142 @@
+@import url('https://fonts.cdnfonts.com/css/ica-rubrik-black');
+@import url('https://fonts.cdnfonts.com/css/poppins');
+
+.banner{
+    width: 100%;
+    height: 100vh;
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+    background-color: aqua;
+    height: 350px;
+    overflow: hidden;
+}
+.banner .slider{
+    position: absolute;
+    width: 400px;
+    height: 500px;
+    top: 10%;
+    left: calc(50% - 100px);
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    animation: autoRun 20s linear infinite;
+    z-index: 2;
+}
+@keyframes autoRun{
+    from{
+        transform: perspective(1000px) rotateX(-10deg) rotateY(0deg);
+    }to{
+        transform: perspective(1000px) rotateX(-10deg) rotateY(360deg);
+    }
+}
+
+.banner .slider .item{
+    position: absolute;
+    inset: 0 0 0 0;
+    transform: 
+        rotateY(calc( (var(--position) - 1) * (360 / var(--quantity)) * 1deg))
+        translateZ(2500px);
+}
+.banner .slider .item img{
+    width: 120%;
+    height: 120%;
+    object-fit: cover;
+}
+/*
+@media screen and (max-width: 1023px) {
+    .banner .slider{
+        width: 160px;
+        height: 200px;
+        left: calc(50% - 80px);
+    }
+    .banner .slider .item{
+        transform: 
+            rotateY(calc( (var(--position) - 1) * (360 / var(--quantity)) * 1deg))
+            translateZ(300px);
+    }
+    
+}
+@media screen and (max-width: 767px) {
+    .banner .slider{
+        width: 100px;
+        height: 150px;
+        left: calc(50% - 50px);
+    }
+    .banner .slider .item{
+        transform: 
+            rotateY(calc( (var(--position) - 1) * (360 / var(--quantity)) * 1deg))
+            translateZ(180px);
+    }
+
+}*/
+        /* 1023px ve altındaki ekranlar için */
+@media (max-width: 1023px) {
+    .banner .slider {
+        width: 300px;  /* Daha küçük bir genişlik */
+        height: 400px; /* Daha küçük bir yükseklik */
+        top: 12%;
+        left: calc(50% - 150px); /* Yatayda daha geniş bir mesafe */
+        animation: autoRun 18s linear infinite; /* Animasyon süresi kısaltılmıştır */
+    }
+
+    .banner .slider .item {
+        transform: 
+            rotateY(calc((var(--position) - 1) * (360 / var(--quantity)) * 1deg))
+            translateZ(2000px);  /* Derinlik daha düşük */
+    }
+
+    .banner .slider .item img {
+        width: 100%;  /* Görsellerin daha uygun şekilde boyutlandırılması */
+        height: 100%;
+    }
+    .banner{
+        height: 300px;};
+}
+
+/* 764px ve altındaki ekranlar için */
+@media (max-width: 764px) {
+    .banner .slider {
+        width: 250px;  /* Küçültülmüş genişlik */
+        height: 350px; /* Küçültülmüş yükseklik */
+        top: 15%;
+        left: calc(50% - 125px); /* Yatayda ortalanmış */
+        animation: autoRun 15s linear infinite; /* Animasyon süresi daha kısa */
+    }
+
+    .banner .slider .item {
+        transform: 
+            rotateY(calc((var(--position) - 1) * (360 / var(--quantity)) * 1deg))
+            translateZ(1500px);  /* Derinlik daha da azaltılmış */
+    }
+
+    .banner .slider .item img {
+        width: 100%;  /* Görselleri tam boyutlandırmak */
+        height: 100%;
+    }
+    .banner{
+        height: 250px;};
+}
+
+/* 460px ve altındaki ekranlar için */
+@media (max-width: 460px) {
+    .banner .slider {
+        width: 200px;  /* En küçük genişlik */
+        height: 300px; /* En küçük yükseklik */
+        top: 20%;
+        left: calc(50% - 100px); /* Ortalamayı korur */
+        animation: autoRun 12s linear infinite; /* Animasyon süresi en kısa */
+    }
+
+    .banner .slider .item {
+        transform: 
+            rotateY(calc((var(--position) - 1) * (360 / var(--quantity)) * 1deg))
+            translateZ(1200px);  /* Derinlik en küçük seviyeye indirildi */
+    }
+
+    .banner .slider .item img {
+        width: 100%;  /* Görselleri tam boyutlandırmak */
+        height: 100%;
+    }
+    .banner{
+        height: 200px;};
+}

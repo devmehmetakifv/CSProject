@@ -1,0 +1,42 @@
+.navbar {
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+}
+
+.navbar-brand img {
+    max-height: 50px;
+}
+
+.nav-link {
+    color: white !important;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #a2a022 !important;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background-color: #f1c40f;
+    border-color: #f1c40f;
+    color: #212529;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background-color: #00f2fe;
+    border-color: #ffffff;
+}
+
+.navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.5);
+}
