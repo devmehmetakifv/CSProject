@@ -1,6 +1,14 @@
-namespace CSProject.Controllers;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
-public class AdminController
+namespace MyProject.Controllers // Namespace projenize uygun olmalı
 {
-    
+    [Authorize(Roles = "Admin")]
+    public class AdminController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
 }

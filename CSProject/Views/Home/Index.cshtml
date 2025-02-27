@@ -2,7 +2,35 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="min-h-screen flex flex-col justify-between bg-gray-100 text-gray-800">
+    <!-- Hero Section -->
+    <div class="text-center py-20 bg-blue-600 text-white">
+        <h1 class="text-5xl font-bold mb-5 ">Hoş Geldiniz</h1>
+        <p class="text-lg mb-6">ASP.NET Core ile güçlü ve modern web uygulamaları geliştirin.</p>
+ 
+    </div>
+
+    <!-- Features Section -->
+    <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-semibold text-center mb-16">Öne Çıkan Özellikler</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow text-center">
+                <h3 class="text-xl font-semibold mb-2">Performans</h3>
+                <p>ASP.NET Core, yüksek performanslı ve ölçeklenebilir web uygulamaları için mükemmel bir çözümdür.</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow text-center">
+                <h3 class="text-xl font-semibold mb-2">Güvenlik</h3>
+                <p>Güçlü güvenlik özellikleri sayesinde uygulamalarınız güvenli ve stabil çalışır.</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow text-center">
+                <h3 class="text-xl font-semibold mb-2">Kolay Kullanım</h3>
+                <p>Geliştiriciler için modern ve esnek bir yapıya sahip, hızlı geliştirme imkanı sunar.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center bg-gray-800 text-white py-4">
+        <p>&copy; @DateTime.Now.Year - Tüm Hakları Saklıdır.</p>
+    </footer>
 </div>
