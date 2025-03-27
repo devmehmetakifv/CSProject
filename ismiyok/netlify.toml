@@ -1,0 +1,11 @@
+[build]
+  # Derleme komutu
+  command = "npm run build"
+  # Derleme çıktısının konumu
+  publish = "dist"
+
+# SPA uygulamaları için yönlendirme ayarı
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
