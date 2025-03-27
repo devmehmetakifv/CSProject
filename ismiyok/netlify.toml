@@ -1,8 +1,18 @@
-   [build]
-     command = "npm run build"
-     publish = "build"
-   
-   [[redirects]]
-     from = "/*"
-     to = "/index.html"
-     status = 200
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[deploy]
+  publish = "build"
+  command = "npm run build"
+
+[context.production]
+  command = "npm run build"
+
+[context.deploy-preview]
+  command = "npm run build"
