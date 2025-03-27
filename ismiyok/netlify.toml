@@ -6,13 +6,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
-[deploy]
-  publish = "build"
-  command = "npm run build"
-
-[context.production]
-  command = "npm run build"
-
-[context.deploy-preview]
-  command = "npm run build"
