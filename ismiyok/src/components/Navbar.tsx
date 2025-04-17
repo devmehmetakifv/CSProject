@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
@@ -6,6 +6,8 @@ const Navbar: React.FC = () => {
   const { user, userType, logout } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     try {
@@ -14,6 +16,19 @@ const Navbar: React.FC = () => {
       console.error('Çıkış yapılırken hata oluştu:', error);
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="bg-white border-b border-gray-200">
@@ -38,22 +53,74 @@ const Navbar: React.FC = () => {
               </Link>
             </div>
           </div>
+
+          {/* Sağ taraftaki butonlar */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
             {!user ? (
-              <>
-                <Link
-                  to="/login"
-                  className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onMouseEnter={() => setDropdownOpen(true)}
+                  className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium flex items-center"
                 >
-                  Giriş Yap
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Üye Ol
-                </Link>
-              </>
+                  Giriş Yap / Üye Ol
+                  <svg
+                    className={`ml-2 h-5 w-5 transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {dropdownOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-50"
+                    onMouseLeave={() => setDropdownOpen(false)}
+                  >
+                    <div className="p-4">
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Aday (İş mi Arıyorsun?)</p>
+                        <p className="text-xs text-gray-500 mb-3">Burada seni bekleyen binlerce ilan var!</p>
+                        <div className="flex space-x-2">
+                          <Link
+                            to="/login?type=jobseeker"
+                            className="flex-1 text-center bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            Aday Girişi
+                          </Link>
+                          <Link
+                            to="/register?type=jobseeker"
+                            className="flex-1 text-center bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            Üye Ol
+                          </Link>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 pt-4">
+                        <p className="text-sm text-gray-600 mb-2">İşveren (İlan mı Vereceksiniz?)</p>
+                        <p className="text-xs text-gray-500 mb-3">Pozisyonunuza en uygun aday burada!</p>
+                        <div className="flex space-x-2">
+                          <Link
+                            to="/login?type=employer"
+                            className="flex-1 text-center bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            İşveren Girişi
+                          </Link>
+                          <Link
+                            to="/register?type=employer"
+                            className="flex-1 text-center bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            Üye Ol
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 {userType === 'employer' && (
@@ -121,7 +188,7 @@ const Navbar: React.FC = () => {
               </>
             )}
           </div>
-          
+
           {/* Mobil menü butonu */}
           <div className="sm:hidden flex items-center">
             <button
@@ -136,7 +203,7 @@ const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Mobil menü */}
       {mobileMenuOpen && (
         <div className="sm:hidden bg-white border-b border-gray-200">
@@ -147,7 +214,47 @@ const Navbar: React.FC = () => {
             >
               Tüm İlanlar
             </Link>
-            {user ? (
+            {!user ? (
+              <>
+                <div className="p-4">
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-2">Aday (İş mi Arıyorsun?)</p>
+                    <div className="flex flex-col space-y-2">
+                      <Link
+                        to="/login?type=jobseeker"
+                        className="text-center bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium"
+                      >
+                        Aday Girişi
+                      </Link>
+                      <Link
+                        to="/register?type=jobseeker"
+                        className="text-center bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
+                      >
+                        Üye Ol
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-sm text-gray-600 mb-2">İşveren (İlan mı Vereceksiniz?)</p>
+                    <div className="flex flex-col space-y-2">
+                      <Link
+                        to="/login?type=employer"
+                        className="text-center bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md text-sm font-medium"
+                      >
+                        İşveren Girişi
+                      </Link>
+                      <Link
+                        to="/register?type=employer"
+                        className="text-center bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
+                      >
+                        Üye Ol
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
               <>
                 {userType === 'employer' && (
                   <>
@@ -195,21 +302,6 @@ const Navbar: React.FC = () => {
                 >
                   Çıkış Yap
                 </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                >
-                  Giriş Yap
-                </Link>
-                <Link
-                  to="/register"
-                  className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                >
-                  Üye Ol
-                </Link>
               </>
             )}
           </div>
