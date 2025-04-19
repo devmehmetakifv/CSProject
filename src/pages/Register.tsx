@@ -9,8 +9,6 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [userType, setUserType] = useState<UserType>('jobseeker');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,10 +16,6 @@ const Register: React.FC = () => {
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  };
-
-  const validatePassword = (password: string): boolean => {
-    return password.length >= 6; // En az 6 karakter
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,25 +28,12 @@ const Register: React.FC = () => {
       return;
     }
 
-    // Şifre doğrulama
-    if (!validatePassword(password)) {
-      setError('Şifre en az 6 karakter olmalıdır.');
-      return;
-    }
-
-    // Şifre eşleşme kontrolü
-    if (password !== confirmPassword) {
-      setError('Şifreler eşleşmiyor.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await register(email, password, userType);
+      await register(email, '123456', userType); // Geçici şifre kullanılıyor
       navigate('/');
     } catch (err: any) {
-      // Firebase hata mesajına göre daha anlamlı mesajlar göster
       if (err.code === 'auth/email-already-in-use') {
         setError('Bu email adresi zaten kullanılıyor.');
       } else {
@@ -73,7 +54,7 @@ const Register: React.FC = () => {
           <p className="mt-2 text-center text-sm text-gray-600">
             Veya{' '}
             <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              mevcut hesabınıza giriş yapın
+              İş Arayan mısın?
             </Link>
           </p>
         </div>
@@ -100,57 +81,9 @@ const Register: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field rounded-t-md"
+                className="input-field rounded-md"
                 placeholder="Email adresi"
               />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Şifre
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
-                placeholder="Şifre"
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Şifre Tekrar
-              </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input-field"
-                placeholder="Şifre Tekrar"
-              />
-            </div>
-            <div>
-              <label htmlFor="user-type" className="sr-only">
-                Hesap Türü
-              </label>
-              <select
-                id="user-type"
-                name="user-type"
-                value={userType}
-                onChange={(e) => setUserType(e.target.value as UserType)}
-                className="input-field rounded-b-md"
-                required
-              >
-                <option value="jobseeker">İş Arayan</option>
-                <option value="employer">İşveren</option>
-              </select>
             </div>
           </div>
 
@@ -160,7 +93,7 @@ const Register: React.FC = () => {
               disabled={loading}
               className="btn-primary w-full"
             >
-              {loading ? 'Kayıt yapılıyor...' : 'Kayıt Ol'}
+              {loading ? 'Devam ediliyor...' : 'Devam et'}
             </button>
           </div>
         </form>
