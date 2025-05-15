@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -11,10 +11,12 @@ import NewJob from './pages/NewJob';
 import EditJob from './pages/EditJob';
 import DeleteJob from './pages/DeleteJob';
 import EmployerDashboard from './pages/EmployerDashboard';
-import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import MyApplications from './pages/MyApplications';
 import Applicants from './pages/Applicants';
+import Logo from './components/Logo';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -73,93 +75,108 @@ const CookieConsent: React.FC = () => {
   );
 };
 
+// Ana Layout bileşeni - sayfa düzenini ve navbar'ı yönetir
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith('/admin');
+  
+  return (
+    <div className="min-h-screen bg-white">
+      {!isAdminPage && <Navbar />}
+      <div className="max-w-full mx-auto">
+        {children}
+      </div>
+      <footer className={`bg-gray-100 border-t border-gray-200 py-6 mt-12 ${isAdminPage ? 'hidden' : ''}`}>
+        <div className="max-w-7xl mx-auto flex flex-col items-center">
+          <Logo width={100} height={60} />
+          <span className="text-gray-500 text-sm mt-2">© 2024 Sana mı iş yok. Tüm hakları saklıdır.</span>
+        </div>
+      </footer>
+      <CookieConsent />
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-white">
-          <Navbar />
-          <div className="max-w-full mx-auto">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/:id" element={<JobDetail />} />
-              
-              {/* İş Arayan Rotaları */}
-              <Route
-                path="/profile"
-                element={
-                  <PrivateRoute allowedUserTypes={['jobseeker']}>
-                    <Profile />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/my-applications"
-                element={
-                  <PrivateRoute allowedUserTypes={['jobseeker']}>
-                    <MyApplications />
-                  </PrivateRoute>
-                }
-              />
+        <AppLayout>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/admin" element={<AdminLogin />} />
+            
+            {/* İş Arayan Rotaları */}
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute allowedUserTypes={['jobseeker']}>
+                  <Profile />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/my-applications"
+              element={
+                <PrivateRoute allowedUserTypes={['jobseeker']}>
+                  <MyApplications />
+                </PrivateRoute>
+              }
+            />
 
-              {/* İşveren Rotaları */}
-              <Route
-                path="/employer/dashboard"
-                element={
-                  <PrivateRoute allowedUserTypes={['employer']}>
-                    <EmployerDashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/employer/jobs/new"
-                element={
-                  <PrivateRoute allowedUserTypes={['employer']}>
-                    <NewJob />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/employer/jobs/edit/:id"
-                element={
-                  <PrivateRoute allowedUserTypes={['employer']}>
-                    <EditJob />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/employer/jobs/:jobId/delete"
-                element={
-                  <PrivateRoute allowedUserTypes={['employer']}>
-                    <DeleteJob />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/employer/jobs/:jobId/applicants"
-                element={
-                  <PrivateRoute allowedUserTypes={['employer']}>
-                    <Applicants />
-                  </PrivateRoute>
-                }
-              />
+            {/* İşveren Rotaları */}
+            <Route
+              path="/employer/dashboard"
+              element={
+                <PrivateRoute allowedUserTypes={['employer']}>
+                  <EmployerDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/employer/jobs/new"
+              element={
+                <PrivateRoute allowedUserTypes={['employer']}>
+                  <NewJob />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/employer/jobs/:id/edit"
+              element={
+                <PrivateRoute allowedUserTypes={['employer']}>
+                  <EditJob />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/employer/jobs/:jobId/delete"
+              element={
+                <PrivateRoute allowedUserTypes={['employer']}>
+                  <DeleteJob />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/employer/jobs/:jobId/applicants"
+              element={
+                <PrivateRoute allowedUserTypes={['employer']}>
+                  <Applicants />
+                </PrivateRoute>
+              }
+            />
 
-              {/* Admin Rotaları */}
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <PrivateRoute allowedUserTypes={['admin']}>
-                    <AdminDashboard />
-                  </PrivateRoute>
-                }
-              />
-            </Routes>
-          </div>
-          <CookieConsent />
-        </div>
+            {/* Admin Rotaları */}
+            <Route
+              path="/admin/dashboard"
+              element={<AdminDashboard />}
+            />
+          </Routes>
+        </AppLayout>
       </AuthProvider>
     </Router>
   );

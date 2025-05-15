@@ -116,12 +116,16 @@ export default function EmployerDashboard() {
                     >
                       Düzenle
                     </Link>
-                    <button
-                      onClick={() => handleDelete(job.id)}
+                    <Link
+                      to="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDelete(job.id);
+                      }}
                       className="btn-secondary text-red-600 hover:text-red-700"
                     >
                       Sil
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </li>

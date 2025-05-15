@@ -1,19 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import Logo from './Logo';
 
 const Navbar: React.FC = () => {
   const { user, userType, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await logout();
+      
+      // 2 saniye bekle ve ana sayfaya yönlendir
+      setTimeout(() => {
+        setIsLoggingOut(false);
+        navigate('/');
+      }, 800);
     } catch (error) {
       console.error('Çıkış yapılırken hata oluştu:', error);
+      setIsLoggingOut(false);
     }
   };
 
@@ -30,14 +41,26 @@ const Navbar: React.FC = () => {
     };
   }, []);
 
+  // Loading ekranı göster
+  if (isLoggingOut) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-700 text-lg font-medium">Çıkış yapılıyor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-2xl font-bold text-blue-600">
-                İşBul
+              <Link to="/">
+                <Logo width={120} height={80} />
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -49,7 +72,7 @@ const Navbar: React.FC = () => {
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Tüm İlanlar
+                TÜM İLANLAR
               </Link>
             </div>
           </div>
@@ -169,9 +192,9 @@ const Navbar: React.FC = () => {
                 )}
                 {userType === 'admin' && (
                   <Link
-                    to="/admin/dashboard"
+                    to="/admin"
                     className={`text-sm font-medium ${
-                      location.pathname === '/admin/dashboard'
+                      location.pathname === '/admin'
                         ? 'text-gray-900'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
@@ -290,7 +313,7 @@ const Navbar: React.FC = () => {
                 )}
                 {userType === 'admin' && (
                   <Link
-                    to="/admin/dashboard"
+                    to="/admin"
                     className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
                   >
                     Yönetici Paneli
