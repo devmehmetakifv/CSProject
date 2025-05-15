@@ -23,6 +23,9 @@ export default function JobDetail() {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -56,10 +59,28 @@ export default function JobDetail() {
       await updateDoc(doc(db, 'jobs', job.id), {
         applicants: arrayUnion(user.uid)
       });
-      alert('Başvurunuz başarıyla gönderildi!');
+      // Dialog göster
+      setShowSuccessDialog(true);
+      
+      // Başvurudan sonra job state'i güncelle
+      setJob({
+        ...job,
+        applicants: [...job.applicants, user.uid]
+      });
+      
+      // 5 saniye sonra dialog'u otomatik kapat
+      setTimeout(() => {
+        setShowSuccessDialog(false);
+      }, 5000);
     } catch (error) {
       console.error('Error applying for job:', error);
-      alert('Başvuru sırasında bir hata oluştu.');
+      setErrorMessage('Başvuru sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+      setShowErrorDialog(true);
+      
+      // 5 saniye sonra hata dialog'unu otomatik kapat
+      setTimeout(() => {
+        setShowErrorDialog(false);
+      }, 5000);
     } finally {
       setApplying(false);
     }
@@ -82,6 +103,62 @@ export default function JobDetail() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Başarı Dialog */}
+      {showSuccessDialog && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg transform transition-all">
+            <div className="flex justify-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-lg font-medium text-center text-gray-900 mb-2">Başvuru Başarılı</h3>
+            <p className="text-sm text-gray-500 text-center">Başvurunuz başarıyla gönderildi!</p>
+            <div className="mt-5 flex justify-center">
+              <button
+                onClick={() => {
+                  setShowSuccessDialog(false);
+                  navigate('/jobs'); // İlanlar sayfasına yönlendir
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                Tamam
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hata Dialog */}
+      {showErrorDialog && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg transform transition-all">
+            <div className="flex justify-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-lg font-medium text-center text-gray-900 mb-2">Başvuru Hatası</h3>
+            <p className="text-sm text-gray-500 text-center">{errorMessage}</p>
+            <div className="mt-5 flex justify-center">
+              <button
+                onClick={() => {
+                  setShowErrorDialog(false);
+                  navigate('/jobs'); // İlanlar sayfasına yönlendir
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                Tamam
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-4 py-5 sm:px-6">
           <div className="flex justify-between items-start">
@@ -136,7 +213,7 @@ export default function JobDetail() {
               <button
                 onClick={handleApply}
                 disabled={applying}
-                className="btn-primary w-full"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 {applying ? 'Başvuruluyor...' : 'Başvur'}
               </button>
@@ -148,7 +225,7 @@ export default function JobDetail() {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="btn-primary"
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Giriş Yap
               </button>

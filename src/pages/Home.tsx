@@ -244,7 +244,7 @@ const Home: React.FC = () => {
                 </>
               ) : (
                 <Link 
-                  to={userType === 'employer' ? '/employer/dashboard' : userType === 'admin' ? '/admin/dashboard' : '/jobs'}
+                  to={userType === 'employer' ? '/employer/dashboard' : userType === 'admin' ? '/admin' : '/jobs'}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-center"
                 >
                   {userType === 'employer' ? 'İlanlarımı Yönet' : userType === 'admin' ? 'Admin Paneli' : 'İş İlanlarını Görüntüle'}

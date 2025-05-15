@@ -175,7 +175,7 @@ const turkeyData: City[] = [
   {
     id: 34,
     name: 'İstanbul',
-    districts: ['Ataşehir', 'Bakırköy', 'Başakşehir', 'Beşiktaş', 'Beylikdüzü', 'Beyoğlu', 'Büyükçekmece', 'Esenler', 'Esenyurt', 'Fatih', 'Kadıköy', 'Kağıthane', 'Kartal', 'Küçükçekmece', 'Maltepe', 'Pendik', 'Sarıyer', 'Şişli', 'Sultanbeyli', 'Sultangazi', 'Tuzla', 'Ümraniye', 'Üsküdar', 'Zeytinburnu', 'Adalar', 'Arnavutköy', 'Avcılar', 'Bağcılar', 'Bahçelievler', 'Bayrampaşa', 'Beykoz', 'Çatalca', 'Çekmeköy', 'Eyüp', 'Gaziosmanpaşa', 'Güngören', 'Kadıköy', 'Sancaktepe', 'Silivri', 'Şile']
+    districts: ['Ataşehir', 'Bakırköy', 'Başakşehir', 'Beşiktaş', 'Beylikdüzü', 'Beyoğlu', 'Büyükçekmece', 'Esenler', 'Esenyurt', 'Fatih', 'Kadıköy', 'Kağıthane', 'Kartal', 'Küçükçekmece', 'Maltepe', 'Pendik', 'Sarıyer', 'Şişli', 'Sultanbeyli', 'Sultangazi', 'Tuzla', 'Ümraniye', 'Üsküdar', 'Zeytinburnu', 'Adalar', 'Arnavutköy', 'Avcılar', 'Bağcılar', 'Bahçelievler', 'Bayrampaşa', 'Beykoz', 'Çatalca', 'Çekmeköy', 'Eyüp', 'Gaziosmanpaşa', 'Güngören', 'Sancaktepe', 'Silivri', 'Şile']
   },
   {
     id: 35,

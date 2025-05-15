@@ -140,6 +140,31 @@ export default function Jobs() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Üstte arama barı */}
+      <div className="flex flex-col md:flex-row gap-4 mb-8 items-center justify-between">
+        <div className="flex-1 w-full md:w-auto">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Pozisyon veya şirket ara"
+            className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+          />
+        </div>
+        <div className="w-full md:w-64">
+          <select
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value ? Number(e.target.value) : '')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+          >
+            <option value="">Tüm Şehirler</option>
+            {cities.map(city => (
+              <option key={city.id} value={city.id}>{city.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">İş İlanları</h1>
         {user?.userType === 'employer' && (
