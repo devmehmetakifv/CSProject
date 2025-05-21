@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useStore } from '../context/StoreContext';
+import { observer } from 'mobx-react-lite';
 import Logo from './Logo';
 
-const Navbar: React.FC = () => {
+const Navbar: React.FC = observer(() => {
   const { user, userType, logout } = useAuth();
+  const { notificationViewModel, favoriteViewModel } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -202,6 +205,30 @@ const Navbar: React.FC = () => {
                     Yönetici Paneli
                   </Link>
                 )}
+                <Link
+                  to="/notifications"
+                  className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium relative"
+                >
+                  Bildirimler
+                  {notificationViewModel.notifications.filter(n => !n.read).length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {notificationViewModel.notifications.filter(n => !n.read).length}
+                    </span>
+                  )}
+                </Link>
+                {userType === 'jobseeker' && (
+                  <Link
+                    to="/favorites"
+                    className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium relative"
+                  >
+                    Favorilerim
+                    {favoriteViewModel.favorites.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {favoriteViewModel.favorites.length}
+                      </span>
+                    )}
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="text-red-600 hover:text-red-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -319,6 +346,18 @@ const Navbar: React.FC = () => {
                     Yönetici Paneli
                   </Link>
                 )}
+                <Link
+                  to="/notifications"
+                  className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                >
+                  Bildirimler
+                </Link>
+                <Link
+                  to="/favorites"
+                  className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                >
+                  Favorilerim
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium text-red-700 hover:bg-gray-50 hover:border-gray-300"
@@ -332,6 +371,6 @@ const Navbar: React.FC = () => {
       )}
     </header>
   );
-};
+});
 
 export default Navbar; 

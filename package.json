@@ -12,7 +12,9 @@
   "dependencies": {
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
+    "date-fns": "^4.1.0",
     "firebase": "^10.7.1",
+    "mobx-react-lite": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.0"
