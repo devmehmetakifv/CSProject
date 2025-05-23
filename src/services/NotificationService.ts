@@ -39,6 +39,11 @@ export class NotificationService {
     read?: boolean;
   }): Promise<Notification[]> {
     try {
+      if (!userId) {
+        console.warn('getUserNotifications: userId boş olamaz');
+        return [];
+      }
+      
       let q = query(this.notificationsCollection, where('userId', '==', userId));
 
       if (options?.type) {
@@ -67,18 +72,27 @@ export class NotificationService {
         q = query(q, limit(options.limit));
       }
 
-      const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt || Timestamp.now(),
-          updatedAt: data.updatedAt || Timestamp.now(),
-          read: data.read ?? false
-        } as Notification;
-      });
+      try {
+        const querySnapshot = await getDocs(q);
+        
+        return querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt || Timestamp.now(),
+            updatedAt: data.updatedAt || Timestamp.now(),
+            read: data.read ?? false
+          } as Notification;
+        });
+      } catch (firestoreError: any) {
+        // İzin hatalarını özel olarak ele al
+        if (firestoreError.code === 'permission-denied') {
+          console.warn('Notifications koleksiyonuna erişim izni yok. Boş dizi döndürülüyor.');
+          return [];
+        }
+        throw firestoreError;
+      }
     } catch (error) {
       this.handleError(error, NotificationErrorCodes.FETCH_FAILED, 'Bildirimler alınamadı');
     }

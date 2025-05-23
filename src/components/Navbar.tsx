@@ -152,6 +152,12 @@ const Navbar: React.FC = observer(() => {
                 {userType === 'employer' && (
                   <>
                     <Link
+                      to="/employer/jobs/new"
+                      className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Yeni İlan Ekle
+                    </Link>
+                    <Link
                       to="/employer/dashboard"
                       className={`text-sm font-medium ${
                         location.pathname === '/employer/dashboard'
@@ -160,12 +166,6 @@ const Navbar: React.FC = observer(() => {
                       }`}
                     >
                       İlanlarım
-                    </Link>
-                    <Link
-                      to="/employer/jobs/new"
-                      className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
-                    >
-                      Yeni İlan Ekle
                     </Link>
                   </>
                 )}
@@ -309,16 +309,16 @@ const Navbar: React.FC = observer(() => {
                 {userType === 'employer' && (
                   <>
                     <Link
-                      to="/employer/dashboard"
-                      className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                    >
-                      İlanlarım
-                    </Link>
-                    <Link
                       to="/employer/jobs/new"
                       className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
                     >
                       Yeni İlan Ekle
+                    </Link>
+                    <Link
+                      to="/employer/dashboard"
+                      className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                    >
+                      İlanlarım
                     </Link>
                   </>
                 )}

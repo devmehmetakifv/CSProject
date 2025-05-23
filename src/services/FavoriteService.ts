@@ -33,27 +33,57 @@ export class FavoriteService {
 
   async getUserFavorites(userId: string): Promise<Favorite[]> {
     try {
-      const q = query(this.favoritesCollection, where('userId', '==', userId));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Favorite));
+      if (!userId) {
+        console.warn('getUserFavorites: userId boş olamaz');
+        return [];
+      }
+
+      try {
+        const q = query(this.favoritesCollection, where('userId', '==', userId));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Favorite));
+      } catch (firestoreError: any) {
+        // İzin hatalarını özel olarak ele al
+        if (firestoreError.code === 'permission-denied') {
+          console.warn('Favorites koleksiyonuna erişim izni yok. Boş dizi döndürülüyor.');
+          return [];
+        }
+        throw firestoreError;
+      }
     } catch (error) {
+      console.error('Favoriler getirilemedi:', error);
       throw new Error('Favoriler getirilemedi: ' + (error as Error).message);
     }
   }
 
   async isJobFavorited(userId: string, jobId: string): Promise<boolean> {
     try {
-      const q = query(
-        this.favoritesCollection,
-        where('userId', '==', userId),
-        where('jobId', '==', jobId)
-      );
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
+      if (!userId || !jobId) {
+        console.warn('isJobFavorited: userId ve jobId boş olamaz');
+        return false;
+      }
+      
+      try {
+        const q = query(
+          this.favoritesCollection,
+          where('userId', '==', userId),
+          where('jobId', '==', jobId)
+        );
+        const querySnapshot = await getDocs(q);
+        return !querySnapshot.empty;
+      } catch (firestoreError: any) {
+        // İzin hatalarını özel olarak ele al
+        if (firestoreError.code === 'permission-denied') {
+          console.warn('Favorites koleksiyonuna erişim izni yok. False döndürülüyor.');
+          return false;
+        }
+        throw firestoreError;
+      }
     } catch (error) {
+      console.error('Favori durumu kontrol edilemedi:', error);
       throw new Error('Favori durumu kontrol edilemedi: ' + (error as Error).message);
     }
   }
