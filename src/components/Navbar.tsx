@@ -53,6 +53,10 @@ const Navbar: React.FC = () => {
     );
   }
 
+  const isActive = (path: string) => {
+    return location.pathname === path ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600';
+  };
+
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,14 +69,36 @@ const Navbar: React.FC = () => {
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
-                to="/jobs"
+                to="/"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  location.pathname === '/jobs'
-                    ? 'border-blue-500 text-gray-900'
+                  location.pathname === '/' 
+                    ? 'border-blue-500 text-blue-600' 
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                TÜM İLANLAR
+                Home
+              </Link>
+              
+              <Link
+                to="/categories"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  location.pathname === '/categories'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                Categories
+              </Link>
+              
+              <Link
+                to="/authors"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  location.pathname === '/authors'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                Authors
               </Link>
             </div>
           </div>
@@ -232,10 +258,22 @@ const Navbar: React.FC = () => {
         <div className="sm:hidden bg-white border-b border-gray-200">
           <div className="pt-2 pb-3 space-y-1">
             <Link
-              to="/jobs"
+              to="/"
               className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
             >
-              Tüm İlanlar
+              Home
+            </Link>
+            <Link
+              to="/categories"
+              className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+            >
+              Categories
+            </Link>
+            <Link
+              to="/authors"
+              className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+            >
+              Authors
             </Link>
             {!user ? (
               <>

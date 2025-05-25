@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLatestJobs } from '../hooks/useLatestJobs';
+import { getNameById } from '../services/jobConstants';
+import { JOB_TYPES, WORK_PREFERENCES, EXPERIENCE_LEVELS, SECTORS } from '../services/jobConstants';
 
 const Home: React.FC = () => {
   const { user, userType, devModeLogin } = useAuth();
@@ -8,6 +11,7 @@ const Home: React.FC = () => {
   const [showDevSection, setShowDevSection] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { jobs: featuredJobs, loading: jobsLoading, error: jobsError } = useLatestJobs(5);
 
   // İş arayan/kariyer görselleri
   const heroImages = [
@@ -68,12 +72,6 @@ const Home: React.FC = () => {
     { name: 'Müşteri Hizmetleri', icon: '🤝', count: 134 },
     { name: 'Finans', icon: '💰', count: 112 },
     { name: 'İnsan Kaynakları', icon: '👥', count: 92 },
-  ];
-
-  const featuredJobs = [
-    { id: 1, title: 'Kıdemli Frontend Geliştirici', company: 'Tech Innovators', location: 'İstanbul', salary: '25.000₺ - 35.000₺', type: 'Tam Zamanlı', logo: '🏢', isNew: true },
-    { id: 2, title: 'UX/UI Tasarımcı', company: 'Creative Studio', location: 'İzmir (Uzaktan)', salary: '20.000₺ - 30.000₺', type: 'Tam Zamanlı', logo: '🎨', isNew: true },
-    { id: 3, title: 'Satış Uzmanı', company: 'Growth Partners', location: 'Ankara', salary: '15.000₺ - 25.000₺', type: 'Tam Zamanlı', logo: '📈', isNew: false },
   ];
 
   return (
@@ -200,32 +198,58 @@ const Home: React.FC = () => {
             <Link to="/jobs" className="text-blue-600 hover:text-blue-800 font-medium">Tüm İlanlar →</Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredJobs.map(job => (
-              <Link 
-                key={job.id} 
-                to={`/jobs/${job.id}`}
-                className="bg-white rounded-lg shadow-md hover:shadow-lg transition overflow-hidden flex flex-col h-full"
-              >
-                <div className="p-6 flex-grow">
-                  <div className="flex justify-between items-start">
-                    <div className="text-4xl bg-gray-100 p-3 rounded-lg mb-4">{job.logo}</div>
-                    {job.isNew && <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Yeni</span>}
+          {jobsLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : jobsError ? (
+            <div className="bg-red-50 p-4 rounded-lg text-red-600 text-center">
+              İlanlar yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+            </div>
+          ) : featuredJobs.length === 0 ? (
+            <div className="bg-white p-8 rounded-lg shadow text-center">
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">Henüz İlan Bulunmuyor</h3>
+              <p className="text-gray-500">Yakında yeni ilanlar eklenecek.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredJobs.map(job => (
+                <Link 
+                  key={job.id} 
+                  to={`/jobs/${job.id}`}
+                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition overflow-hidden flex flex-col h-full"
+                >
+                  <div className="p-6 flex-grow">
+                    <div className="flex justify-between items-start">
+                      <div className="text-4xl bg-gray-100 p-3 rounded-lg mb-4">
+                        {job.sector ? getNameById(SECTORS, job.sector).charAt(0) : '🏢'}
+                      </div>
+                      <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Yeni</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{job.title}</h3>
+                    <p className="text-gray-600 mb-2">{job.company}</p>
+                    <p className="text-gray-600 text-sm mb-4">{job.location}</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                        {getNameById(JOB_TYPES, job.type)}
+                      </span>
+                      {job.workPreference && (
+                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
+                          {getNameById(WORK_PREFERENCES, job.workPreference)}
+                        </span>
+                      )}
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                        {job.salary}
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{job.title}</h3>
-                  <p className="text-gray-600 mb-2">{job.company}</p>
-                  <p className="text-gray-600 text-sm mb-4">{job.location}</p>
-                  <div className="flex gap-2 mb-4">
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">{job.type}</span>
-                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">{job.salary}</span>
+                  <div className="bg-gray-50 px-6 py-3 text-right">
+                    <span className="text-blue-600 font-medium">Detayları Gör →</span>
                   </div>
-                </div>
-                <div className="bg-gray-50 px-6 py-3 text-right">
-                  <span className="text-blue-600 font-medium">Detayları Gör →</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
         
         {/* Kullanıcı İşlemleri */}

@@ -17,7 +17,23 @@ import Applicants from './pages/Applicants';
 import Logo from './components/Logo';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import BlogList from './components/BlogList';
+import BlogDetail from './components/BlogDetail';
+import CategoryList from './components/CategoryList';
+import Authors from './components/Authors';
 
+import Chatbot from './pages/Chatbot'; // <- chatbot sayfan
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/chat" element={<Chatbot />} /> {/* Yeni rota */}
+      </Routes>
+    </Router>
+  );
+}
 interface PrivateRouteProps {
   children: React.ReactNode;
   allowedUserTypes?: ('jobseeker' | 'employer' | 'admin')[];
@@ -175,6 +191,11 @@ const App: React.FC = () => {
               path="/admin/dashboard"
               element={<AdminDashboard />}
             />
+
+            {/* Blog Rotaları */}
+            <Route path="/blogs/:slug" element={<BlogDetail />} />
+            <Route path="/categories" element={<CategoryList />} />
+            <Route path="/authors" element={<Authors />} />
           </Routes>
         </AppLayout>
       </AuthProvider>
