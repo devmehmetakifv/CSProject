@@ -1,8 +1,8 @@
-import { Notification, NotificationType, NotificationData, CreateNotificationInput, NotificationError, NotificationErrorCodes } from '../models/Notification';
+import { Notification, NotificationType, NotificationData, CreateNotificationInput, NotificationError, NotificationErrorCodes, INotificationService } from '../models/Notification';
 import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc, Timestamp, deleteDoc, writeBatch, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-export class NotificationService {
+export class NotificationService implements INotificationService {
   private db = getFirestore();
   private notificationsCollection = collection(this.db, 'notifications');
 
@@ -32,50 +32,19 @@ export class NotificationService {
     }
   }
 
-  async getUserNotifications(userId: string, options?: {
-    limit?: number;
-    orderBy?: 'date' | 'type' | 'read';
-    type?: NotificationType;
-    read?: boolean;
-  }): Promise<Notification[]> {
+  async getUserNotifications(userId: string): Promise<Notification[]> {
     try {
       if (!userId) {
         console.warn('getUserNotifications: userId boş olamaz');
         return [];
       }
       
-      let q = query(this.notificationsCollection, where('userId', '==', userId));
-
-      if (options?.type) {
-        q = query(q, where('type', '==', options.type));
-      }
-
-      if (options?.read !== undefined) {
-        q = query(q, where('read', '==', options.read));
-      }
-
-      if (options?.orderBy) {
-        switch (options.orderBy) {
-          case 'date':
-            q = query(q, orderBy('createdAt', 'desc'));
-            break;
-          case 'type':
-            q = query(q, orderBy('type'));
-            break;
-          case 'read':
-            q = query(q, orderBy('read'));
-            break;
-        }
-      }
-
-      if (options?.limit) {
-        q = query(q, limit(options.limit));
-      }
+              let q = query(this.notificationsCollection, where('userId', '==', userId));
 
       try {
         const querySnapshot = await getDocs(q);
         
-        return querySnapshot.docs.map(doc => {
+        const notifications = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -85,11 +54,40 @@ export class NotificationService {
             read: data.read ?? false
           } as Notification;
         });
+
+        // Client-side'da tarihe göre sırala (en yeni önce)
+        return notifications.sort((a, b) => {
+          const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
       } catch (firestoreError: any) {
         // İzin hatalarını özel olarak ele al
         if (firestoreError.code === 'permission-denied') {
           console.warn('Notifications koleksiyonuna erişim izni yok. Boş dizi döndürülüyor.');
           return [];
+        }
+        // Index hataları için de özel mesaj
+        if (firestoreError.code === 'failed-precondition' && firestoreError.message.includes('index')) {
+          console.warn('Firebase index eksik. Basit query kullanıyoruz.');
+          // Basit query ile tekrar dene
+          const simpleQuery = query(this.notificationsCollection, where('userId', '==', userId));
+          const simpleSnapshot = await getDocs(simpleQuery);
+          const notifications = simpleSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt || Timestamp.now(),
+              updatedAt: data.updatedAt || Timestamp.now(),
+              read: data.read ?? false
+            } as Notification;
+          });
+          return notifications.sort((a, b) => {
+            const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt);
+            const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+          });
         }
         throw firestoreError;
       }

@@ -23,6 +23,7 @@ interface Job {
   requirements: string[];
   salary: string;
   createdAt: string;
+  isActive?: boolean;
   cityId?: number;
   districtName?: string;
   workPreference?: string;
@@ -71,13 +72,21 @@ export default function Jobs() {
 
   const fetchJobs = async () => {
     try {
-      const jobsQuery = query(collection(db, 'jobs'));
+      // Sadece onaylanmış iş ilanlarını getir
+      const jobsQuery = query(
+        collection(db, 'jobs'),
+        where('status', '==', 'approved')
+      );
       const querySnapshot = await getDocs(jobsQuery);
       const jobsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        isActive: doc.data().isActive !== undefined ? doc.data().isActive : true
       })) as Job[];
-      setJobs(jobsData);
+      
+      // Sadece aktif ilanları göster
+      const activeJobs = jobsData.filter(job => job.isActive);
+      setJobs(activeJobs);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {

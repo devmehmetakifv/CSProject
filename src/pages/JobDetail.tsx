@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { NotificationService } from '../services/NotificationService';
 
 interface Job {
   id: string;
@@ -26,12 +27,21 @@ export default function JobDetail() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const notificationService = new NotificationService();
 
   useEffect(() => {
     fetchJob();
   }, [id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
 
   const fetchJob = async () => {
     if (!id) return;
@@ -51,14 +61,52 @@ export default function JobDetail() {
     }
   };
 
+  const fetchUserProfile = async () => {
+    if (!user) return;
+
+    try {
+      setProfileLoading(true);
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        setUserProfile(userDoc.data());
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   const handleApply = async () => {
     if (!job || !user) return;
 
     try {
       setApplying(true);
+      console.log('User:', user); // Debug
+      console.log('Job ID:', job.id); // Debug
+      console.log('User UID:', user.uid); // Debug
+      
       await updateDoc(doc(db, 'jobs', job.id), {
         applicants: arrayUnion(user.uid)
       });
+
+      // İşverene bildirim gönder
+      try {
+        await notificationService.createNotification({
+          userId: job.employerId,
+          title: 'Yeni Başvuru!',
+          message: `"${job.title}" ilanınıza yeni bir başvuru geldi.`,
+          type: 'application',
+          read: false,
+          data: {
+            jobId: job.id,
+            applicantId: user.uid
+          }
+        });
+      } catch (notificationError) {
+        console.error('Bildirim gönderilirken hata:', notificationError);
+      }
+
       // Dialog göster
       setShowSuccessDialog(true);
       
@@ -100,6 +148,7 @@ export default function JobDetail() {
 
   const hasApplied = user && job.applicants.includes(user.uid);
   const isEmployer = user && user.uid === job.employerId;
+  const hasRequiredInfo = userProfile && userProfile.name && userProfile.phone;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -208,6 +257,28 @@ export default function JobDetail() {
             ) : hasApplied ? (
               <div className="text-center text-green-600">
                 Bu ilana başvurdunuz.
+              </div>
+            ) : !hasRequiredInfo ? (
+              <div className="text-center">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div className="text-left">
+                      <h3 className="text-sm font-medium text-yellow-800">Profil Bilgileri Eksik</h3>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Başvuru yapmak için ad soyad ve telefon bilgilerinizi doldurmanız gerekiyor.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                >
+                  Profilini Güncelle
+                </button>
               </div>
             ) : (
               <button

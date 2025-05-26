@@ -1,6 +1,5 @@
-import { makeAutoObservable } from 'mobx';
-import { NotificationService } from '../services/NotificationService';
-import { Notification } from '../models/Notification';
+import { makeAutoObservable, action } from 'mobx';
+import { INotificationService, Notification } from '../models/Notification';
 import { Timestamp } from 'firebase/firestore';
 
 export class NotificationViewModel {
@@ -18,16 +17,20 @@ export class NotificationViewModel {
     }
   };
 
-  constructor(private notificationService: NotificationService) {
+  constructor(private notificationService: INotificationService) {
     makeAutoObservable(this);
   }
 
-  private handleError(error: unknown, defaultMessage: string) {
+  private handleError = action((error: unknown, defaultMessage: string) => {
     console.error(defaultMessage, error);
     this.error = error instanceof Error ? error.message : defaultMessage;
-  }
+  });
 
-  updateNotificationStats() {
+  private setNotifications = action((notifications: Notification[]) => {
+    this.notifications = notifications;
+  });
+
+  updateNotificationStats = action(() => {
     this.unreadCount = this.notifications.filter(n => !n.read).length;
     this.notificationStats = {
       total: this.notifications.length,
@@ -38,56 +41,62 @@ export class NotificationViewModel {
         system: this.notifications.filter(n => n.type === 'system').length
       }
     };
-  }
+  });
 
-  async fetchUserNotifications(userId: string) {
+  fetchUserNotifications = action(async (userId: string) => {
     try {
       this.loading = true;
       this.error = null;
       const notifications = await this.notificationService.getUserNotifications(userId);
-      this.notifications = notifications.map(notification => ({
+      const formattedNotifications = notifications.map((notification: Notification) => ({
         ...notification,
         createdAt: notification.createdAt instanceof Timestamp 
           ? notification.createdAt 
           : Timestamp.fromDate(new Date(notification.createdAt))
       }));
+      this.setNotifications(formattedNotifications);
       this.updateNotificationStats();
     } catch (error) {
       this.handleError(error, 'Bildirimler yüklenirken bir hata oluştu');
     } finally {
-      this.loading = false;
+      this.setLoading(false);
     }
-  }
+  });
 
-  async markAsRead(notificationId: string) {
+  private setLoading = action((loading: boolean) => {
+    this.loading = loading;
+  });
+
+  markAsRead = action(async (notificationId: string) => {
     try {
       this.error = null;
       await this.notificationService.markAsRead(notificationId);
-      const notification = this.notifications.find(n => n.id === notificationId);
-      if (notification) {
-        notification.read = true;
-        this.updateNotificationStats();
-      }
+      const updatedNotifications = this.notifications.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      );
+      this.setNotifications(updatedNotifications);
+      this.updateNotificationStats();
     } catch (error) {
       this.handleError(error, 'Bildirim okundu olarak işaretlenirken bir hata oluştu');
     }
-  }
+  });
 
-  async createNotification(notification: Omit<Notification, 'id' | 'createdAt'>) {
+  createNotification = action(async (notification: Omit<Notification, 'id' | 'createdAt'>) => {
     try {
       this.error = null;
       const newNotification = await this.notificationService.createNotification({
         ...notification,
         createdAt: Timestamp.now()
       });
-      this.notifications.unshift(newNotification);
+      const updatedNotifications = [newNotification, ...this.notifications];
+      this.setNotifications(updatedNotifications);
       this.updateNotificationStats();
     } catch (error) {
       this.handleError(error, 'Bildirim oluşturulurken bir hata oluştu');
     }
-  }
+  });
 
-  async deleteNotification(notificationId: string) {
+  deleteNotification = action(async (notificationId: string) => {
     try {
       this.error = null;
       await this.notificationService.deleteNotification(notificationId);
@@ -96,9 +105,9 @@ export class NotificationViewModel {
     } catch (error) {
       this.handleError(error, 'Bildirim silinirken bir hata oluştu');
     }
-  }
+  });
 
-  async markAllAsRead(userId: string) {
+  markAllAsRead = action(async (userId: string) => {
     try {
       this.error = null;
       await this.notificationService.markAllAsRead(userId);
@@ -107,37 +116,41 @@ export class NotificationViewModel {
     } catch (error) {
       this.handleError(error, 'Bildirimler toplu işaretlenirken bir hata oluştu');
     }
-  }
+  });
 
-  async sortNotifications(sortBy: 'date' | 'type' | 'read') {
+  sortNotifications = action((sortBy: 'date' | 'type' | 'read') => {
     try {
       this.error = null;
+      const sortedNotifications = [...this.notifications];
+      
       switch(sortBy) {
         case 'date':
-          this.notifications.sort((a, b) => {
+          sortedNotifications.sort((a, b) => {
             const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt);
             const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt);
             return dateB.getTime() - dateA.getTime();
           });
           break;
         case 'type':
-          this.notifications.sort((a, b) => a.type.localeCompare(b.type));
+          sortedNotifications.sort((a, b) => a.type.localeCompare(b.type));
           break;
         case 'read':
-          this.notifications.sort((a, b) => Number(a.read) - Number(b.read));
+          sortedNotifications.sort((a, b) => Number(a.read) - Number(b.read));
           break;
       }
+      
+      this.setNotifications(sortedNotifications);
     } catch (error) {
       this.handleError(error, 'Bildirimler sıralanırken bir hata oluştu');
     }
-  }
+  });
 
-  async filterNotifications(filters: {
+  filterNotifications = action(async (filters: {
     type?: 'job' | 'application' | 'system';
     read?: boolean;
     startDate?: Date;
     endDate?: Date;
-  }) {
+  }) => {
     try {
       this.error = null;
       let filteredNotifications = [...this.notifications];
@@ -169,9 +182,9 @@ export class NotificationViewModel {
     } catch (error) {
       this.handleError(error, 'Bildirimler filtrelenirken bir hata oluştu');
     }
-  }
+  });
 
-  clearError() {
+  clearError = action(() => {
     this.error = null;
-  }
+  });
 } 

@@ -25,6 +25,15 @@ export type CreateNotificationInput = Omit<Notification, 'id' | 'createdAt' | 'u
   updatedAt?: Timestamp | Date;
 };
 
+// Common interface for notification services
+export interface INotificationService {
+  createNotification(notification: CreateNotificationInput): Promise<Notification>;
+  getUserNotifications(userId: string): Promise<Notification[]>;
+  markAsRead(notificationId: string): Promise<void>;
+  deleteNotification(notificationId: string): Promise<void>;
+  markAllAsRead(userId: string): Promise<void>;
+}
+
 export class NotificationError extends Error {
   constructor(
     message: string,

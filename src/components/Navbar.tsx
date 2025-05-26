@@ -10,6 +10,9 @@ const Navbar: React.FC = observer(() => {
   const { notificationViewModel, favoriteViewModel } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Admin kontrolü
+  const isAdmin = user?.email === 'admin@sanaismikyok.com' || user?.email === 'fuurkandemiir@gmail.com';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -43,6 +46,13 @@ const Navbar: React.FC = observer(() => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Employer kullanıcıları için bildirimleri yükle
+  useEffect(() => {
+    if (user && userType === 'employer') {
+      notificationViewModel.fetchUserNotifications(user.uid);
+    }
+  }, [user, userType, notificationViewModel]);
 
   // Loading ekranı göster
   if (isLoggingOut) {
@@ -79,30 +89,54 @@ const Navbar: React.FC = observer(() => {
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Home
+                Ana Sayfa
               </Link>
               
               <Link
-                to="/categories"
+                to="/jobs"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  location.pathname === '/categories'
+                  location.pathname === '/jobs'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Categories
+                İlanlar
               </Link>
               
               <Link
-                to="/authors"
+                to="/team"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  location.pathname === '/authors'
+                  location.pathname === '/team'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Authors
+                Ekibimiz
               </Link>
+              
+              <Link
+                to="/visitors"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  location.pathname === '/visitors'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                Sizden Gelenler
+              </Link>
+              
+              {isAdmin && (
+                <Link
+                  to="/admin/dashboard"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    location.pathname.startsWith('/admin')
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-red-500 hover:border-red-300 hover:text-red-700'
+                  }`}
+                >
+                  Admin Paneli
+                </Link>
+              )}
             </div>
           </div>
 
@@ -176,24 +210,16 @@ const Navbar: React.FC = observer(() => {
             ) : (
               <>
                 {userType === 'employer' && (
-                  <>
-                    <Link
-                      to="/employer/jobs/new"
-                      className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
-                    >
-                      Yeni İlan Ekle
-                    </Link>
-                    <Link
-                      to="/employer/dashboard"
-                      className={`text-sm font-medium ${
-                        location.pathname === '/employer/dashboard'
-                          ? 'text-gray-900'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      İlanlarım
-                    </Link>
-                  </>
+                  <Link
+                    to="/employer/dashboard"
+                    className={`text-sm font-medium ${
+                      location.pathname === '/employer/dashboard'
+                        ? 'text-gray-900'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    İlanlarım
+                  </Link>
                 )}
                 {userType === 'jobseeker' && (
                   <>
@@ -231,30 +257,33 @@ const Navbar: React.FC = observer(() => {
                     Yönetici Paneli
                   </Link>
                 )}
-                <Link
-                  to="/notifications"
-                  className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium relative"
-                >
-                  Bildirimler
-                  {notificationViewModel.notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {notificationViewModel.notifications.filter(n => !n.read).length}
-                    </span>
-                  )}
-                </Link>
-                {userType === 'jobseeker' && (
+                {userType === 'employer' && (
                   <Link
-                    to="/favorites"
-                    className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium relative"
+                    to="/notifications"
+                    className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 relative"
+                    title="Bildirimler"
                   >
-                    Favorilerim
-                    {favoriteViewModel.favorites.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {favoriteViewModel.favorites.length}
+                    <svg 
+                      className="h-6 w-6" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" 
+                      />
+                    </svg>
+                    {notificationViewModel.unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {notificationViewModel.unreadCount}
                       </span>
                     )}
                   </Link>
                 )}
+
                 <button
                   onClick={handleLogout}
                   className="text-red-600 hover:text-red-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -288,20 +317,34 @@ const Navbar: React.FC = observer(() => {
               to="/"
               className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
             >
-              Home
+              Ana Sayfa
             </Link>
             <Link
-              to="/categories"
+              to="/jobs"
               className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
             >
-              Categories
+              İlanlar
             </Link>
             <Link
-              to="/authors"
+              to="/team"
               className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
             >
-              Authors
+              Ekibimiz
             </Link>
+            <Link
+              to="/visitors"
+              className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+            >
+              Sizden Gelenler
+            </Link>
+            {isAdmin && (
+              <Link
+                to="/admin/dashboard"
+                className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-red-700 hover:bg-gray-50 hover:border-red-300"
+              >
+                Admin Paneli
+              </Link>
+            )}
             {!user ? (
               <>
                 <div className="p-4">
@@ -345,20 +388,12 @@ const Navbar: React.FC = observer(() => {
             ) : (
               <>
                 {userType === 'employer' && (
-                  <>
-                    <Link
-                      to="/employer/jobs/new"
-                      className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                    >
-                      Yeni İlan Ekle
-                    </Link>
-                    <Link
-                      to="/employer/dashboard"
-                      className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                    >
-                      İlanlarım
-                    </Link>
-                  </>
+                  <Link
+                    to="/employer/dashboard"
+                    className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                  >
+                    İlanlarım
+                  </Link>
                 )}
                 {userType === 'jobseeker' && (
                   <>
@@ -384,18 +419,35 @@ const Navbar: React.FC = observer(() => {
                     Yönetici Paneli
                   </Link>
                 )}
-                <Link
-                  to="/notifications"
-                  className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                >
-                  Bildirimler
-                </Link>
-                <Link
-                  to="/favorites"
-                  className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                >
-                  Favorilerim
-                </Link>
+                {userType === 'employer' && (
+                  <Link
+                    to="/notifications"
+                    className="block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <svg 
+                        className="h-5 w-5 mr-2" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" 
+                        />
+                      </svg>
+                      Bildirimler
+                    </div>
+                    {notificationViewModel.unreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {notificationViewModel.unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
+
                 <button
                   onClick={handleLogout}
                   className="block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium text-red-700 hover:bg-gray-50 hover:border-gray-300"

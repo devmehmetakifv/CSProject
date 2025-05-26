@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - kullanıcılar kendi profillerini okuyabilir/yazabilir
+    // Tüm giriş yapmış kullanıcılar diğer kullanıcı profillerini okuyabilir
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Jobs collection - işverenler kendi ilanlarını yönetebilir
+    // Tüm kullanıcılar iş ilanlarını okuyabilir
+    // Admin onay sistemi için özel kurallar
+    match /jobs/{jobId} {
+      allow read: if request.auth != null; // Tüm authenticated kullanıcılar okuyabilir
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        resource.data.employerId == request.auth.uid || // İşveren kendi ilanlarını güncelleyebilir
+        request.auth.token.email == 'admin@sanaismikyok.com' || // Admin tüm ilanları güncelleyebilir
+        request.auth.token.email == 'fuurkandemiir@gmail.com' // Admin tüm ilanları güncelleyebilir
+      );
+      allow delete: if request.auth != null && (
+        resource.data.employerId == request.auth.uid || // İşveren kendi ilanlarını silebilir
+        request.auth.token.email == 'admin@sanaismikyok.com' || // Admin tüm ilanları silebilir
+        request.auth.token.email == 'fuurkandemiir@gmail.com' // Admin tüm ilanları silebilir
+      );
+    }
+    
+    // Applications collection (eğer kullanılıyorsa)
+    match /applications/{applicationId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Notifications collection - kullanıcılar sadece kendi bildirimlerini görebilir
+    // Sistem bildirimleri oluşturabilir, kullanıcılar kendi bildirimlerini okuyabilir/güncelleyebilir
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.token.email == 'admin@sanaismikyok.com' || 
+        request.auth.token.email == 'fuurkandemiir@gmail.com'
+      );
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.token.email == 'admin@sanaismikyok.com' || 
+        request.auth.token.email == 'fuurkandemiir@gmail.com'
+      );
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.token.email == 'admin@sanaismikyok.com' || 
+        request.auth.token.email == 'fuurkandemiir@gmail.com'
+      );
+    }
+  }
+} 

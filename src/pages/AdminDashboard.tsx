@@ -1,188 +1,161 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { collection, getDocs, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { auth } from '../config/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-
-// Veri tipleri
-interface User {
-  id: string;
-  email: string;
-  userType: 'jobseeker' | 'employer' | 'admin';
-  createdAt: string;
-  name?: string;
-  company?: string;
-}
+import { useAuth } from '../hooks/useAuth';
+import { Navigate } from 'react-router-dom';
+import AdminNavbar from '../components/AdminNavbar';
+import { NotificationService } from '../services/NotificationService';
 
 interface Job {
   id: string;
   title: string;
   company: string;
-  applicants: string[];
+  location: string;
+  type: string;
+  salary: string;
+  description: string;
+  requirements: string[];
   createdAt: string;
-  status: 'active' | 'pending' | 'rejected';
+  employerId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  isActive: boolean; // Aktiflik durumu
+  applicants: string[];
+  cityId?: number;
+  districtName?: string;
+  workPreference?: string;
+  sector?: string;
+  position?: string;
+  experienceLevel?: string;
 }
 
-// Ana dashboard bileşeni
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<User[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'jobs'>('dashboard');
-  const [filterType, setFilterType] = useState<'all' | 'jobseeker' | 'employer'>('all');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const navigate = useNavigate();
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogAction, setDialogAction] = useState<{
+    type: 'approve' | 'reject' | 'pending' | 'delete';
+    jobId: string;
+    jobTitle: string;
+    newStatus?: 'pending' | 'approved' | 'rejected';
+  } | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+  const { user } = useAuth();
+  const [notificationService] = useState(() => new NotificationService());
 
-  // Admin giriş kontrolü
+  // Admin kontrolü - sadece belirli email adresleri admin olabilir
+  const isAdmin = user?.email === 'admin@sanaismikyok.com' || user?.email === 'fuurkandemiir@gmail.com';
+
   useEffect(() => {
-    const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn');
-    if (!isAdminLoggedIn) {
-      navigate('/admin');
-      return;
+    if (isAdmin) {
+      fetchJobs();
     }
+  }, [isAdmin]);
 
-    // Firebase authentication durumunu kontrol et
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // Kullanıcı oturum açmamışsa admin sayfasına yönlendir
-        localStorage.removeItem('isAdminLoggedIn');
-        navigate('/admin');
-      } else {
-        try {
-          // Users koleksiyonundan kullanıcı verisini al
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (!userDoc.exists() || userDoc.data().userType !== 'admin') {
-            // Kullanıcı admin değilse çıkış yap
-            localStorage.removeItem('isAdminLoggedIn');
-            await auth.signOut();
-            navigate('/admin');
-          }
-        } catch (error) {
-          console.error('Error checking admin status:', error);
-          // Hata durumunda da çıkış yap
-          localStorage.removeItem('isAdminLoggedIn');
-          await auth.signOut();
-          navigate('/admin');
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [navigate]);
-
-  // Veri çekme
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchJobs = async () => {
     try {
-      setLoading(true);
+      const jobsQuery = query(collection(db, 'jobs'));
+      const querySnapshot = await getDocs(jobsQuery);
+      const jobsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        isActive: doc.data().isActive !== undefined ? doc.data().isActive : true // Varsayılan olarak aktif
+      })) as Job[];
       
-      // Kullanıcıları getir
-      let usersData: User[] = [];
-      let jobsData: Job[] = [];
-      
-      try {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        usersData = usersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as User[];
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        // Örnek veriler yerine boş array
-        usersData = [];
-      }
-      
-      // İş ilanlarını getir
-      try {
-        const jobsSnapshot = await getDocs(collection(db, 'jobs'));
-        jobsData = jobsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Job[];
-      } catch (error) {
-        console.error('Error fetching jobs:', error);
-        // Örnek veriler yerine boş array
-        jobsData = [];
-      }
-      
-      setUsers(usersData);
+      // Tarihe göre sırala (en yeni önce)
+      jobsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setJobs(jobsData);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Veritabanından veriler yüklenirken bir hata oluştu. Lütfen erişim izinlerinizi kontrol edin.');
-      
-      // Boş diziler ata
-      setUsers([]);
-      setJobs([]);
+      console.error('Error fetching jobs:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Kullanıcı silme
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
-
-    try {
-      await deleteDoc(doc(db, 'users', userId));
-      setUsers(users.filter(user => user.id !== userId));
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('Kullanıcı silinirken bir hata oluştu.');
-    }
+  const openDialog = (type: 'approve' | 'reject' | 'pending' | 'delete', jobId: string, jobTitle: string, newStatus?: 'pending' | 'approved' | 'rejected') => {
+    setDialogAction({ type, jobId, jobTitle, newStatus });
+    setShowDialog(true);
   };
 
-  // İş ilanı silme
-  const handleDeleteJob = async (jobId: string) => {
-    if (!confirm('Bu ilanı silmek istediğinizden emin misiniz?')) return;
-
-    try {
-      await deleteDoc(doc(db, 'jobs', jobId));
-      setJobs(jobs.filter(job => job.id !== jobId));
-    } catch (error) {
-      console.error('Error deleting job:', error);
-      alert('İlan silinirken bir hata oluştu.');
-    }
+  const closeDialog = () => {
+    setShowDialog(false);
+    setDialogAction(null);
   };
 
-  // İş ilanı durumunu güncelleme
-  const handleUpdateJobStatus = async (jobId: string, status: Job['status']) => {
-    try {
-      await updateDoc(doc(db, 'jobs', jobId), { status });
-      setJobs(jobs.map(job => 
-        job.id === jobId ? { ...job, status } : job
-      ));
-    } catch (error) {
-      console.error('Error updating job status:', error);
-      alert('İlan durumu güncellenirken bir hata oluştu.');
-    }
-  };
+  const confirmAction = async () => {
+    if (!dialogAction) return;
 
-  // Çıkış yap
-  const handleLogout = async () => {
+    setActionLoading(dialogAction.jobId);
     try {
-      await auth.signOut();
+      if (dialogAction.type === 'delete') {
+        await deleteDoc(doc(db, 'jobs', dialogAction.jobId));
+        setJobs(jobs.filter(job => job.id !== dialogAction.jobId));
+      } else {
+        const job = jobs.find(j => j.id === dialogAction.jobId);
+        await updateDoc(doc(db, 'jobs', dialogAction.jobId), { status: dialogAction.newStatus });
+        setJobs(jobs.map(job => 
+          job.id === dialogAction.jobId ? { ...job, status: dialogAction.newStatus! } : job
+        ));
+
+        // İşverene bildirim gönder
+        if (job && (dialogAction.newStatus === 'approved' || dialogAction.newStatus === 'rejected')) {
+          try {
+            const title = dialogAction.newStatus === 'approved' 
+              ? 'İş İlanınız Onaylandı!' 
+              : 'İş İlanınız Reddedildi';
+            
+            const message = dialogAction.newStatus === 'approved'
+              ? `"${job.title}" ilanınız admin tarafından onaylandı ve yayınlandı.`
+              : `"${job.title}" ilanınız admin tarafından reddedildi.`;
+
+            await notificationService.createNotification({
+              userId: job.employerId,
+              title,
+              message,
+              type: 'job',
+              read: false,
+              data: {
+                jobId: job.id
+              }
+            });
+          } catch (notificationError) {
+            console.error('Bildirim gönderilirken hata:', notificationError);
+          }
+        }
+      }
+      closeDialog();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error updating job:', error);
     } finally {
-      localStorage.removeItem('isAdminLoggedIn');
-      navigate('/admin');
+      setActionLoading(null);
     }
   };
 
-  // Filtreleme işlemleri
-  const filteredUsers = users.filter(user => {
-    if (filterType !== 'all' && user.userType !== filterType) return false;
-    if (searchTerm && !user.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+  const handleStatusUpdate = async (jobId: string, status: 'pending' | 'approved' | 'rejected') => {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      const actionType = status === 'approved' ? 'approve' : status === 'rejected' ? 'reject' : 'pending';
+      openDialog(actionType as any, jobId, job.title, status);
+    }
+  };
 
-  // Yükleme ekranı
+  const handleDelete = async (jobId: string) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      setJobToDelete(job);
+      setShowDeleteDialog(true);
+    }
+  };
+
+  // Admin değilse ana sayfaya yönlendir
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -191,294 +164,316 @@ export default function AdminDashboard() {
     );
   }
 
+  // Filtreleme
+  const filteredJobs = jobs.filter(job => {
+    // Durum filtresi
+    if (filterStatus !== 'all' && job.status !== filterStatus) return false;
+    
+    // Aktiflik filtresi
+    if (filterActive === 'active' && !job.isActive) return false;
+    if (filterActive === 'inactive' && job.isActive) return false;
+    
+    // Arama filtresi
+    if (searchTerm && !job.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
+        !job.company.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    
+    return true;
+  });
+
+  // İstatistikler
+  const stats = {
+    total: jobs.length,
+    pending: jobs.filter(job => job.status === 'pending').length,
+    approved: jobs.filter(job => job.status === 'approved').length,
+    rejected: jobs.filter(job => job.status === 'rejected').length,
+    active: jobs.filter(job => job.isActive).length,
+    inactive: jobs.filter(job => !job.isActive).length,
+  };
+
   return (
-    <div className="bg-gray-100 min-h-screen">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex">
-              <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
+    <>
+      <AdminNavbar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="mt-2 text-gray-600">İş ilanlarını yönetin ve durumlarını güncelleyin</p>
+      </div>
+
+      {/* İstatistikler */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+          <div className="text-sm text-gray-500">Toplam İlan</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          <div className="text-sm text-gray-500">Bekleyen</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+          <div className="text-sm text-gray-500">Onaylı</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+          <div className="text-sm text-gray-500">Reddedilen</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-blue-600">{stats.active}</div>
+          <div className="text-sm text-gray-500">Aktif</div>
+        </div>
+      </div>
+
+      {/* Filtreler */}
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Arama</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="İş başlığı veya şirket ara..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Onay Durumu</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Tümü</option>
+              <option value="pending">Bekleyen</option>
+              <option value="approved">Onaylı</option>
+              <option value="rejected">Reddedilen</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Aktiflik Durumu</label>
+            <select
+              value={filterActive}
+              onChange={(e) => setFilterActive(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Tümü</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Pasif</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setFilterStatus('all');
+                setFilterActive('all');
+              }}
+              className="w-full px-4 py-2 bg-white text-blue-600 border-2 border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Filtreleri Temizle
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* İş İlanları Listesi */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">
+            İş İlanları ({filteredJobs.length})
+          </h2>
+        </div>
+
+        {filteredJobs.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="mx-auto h-12 w-12 text-gray-400">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
-            <div className="flex space-x-4">
-              <Link 
-                to="/"
-                className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
-              >
-                Ana Menüye Dön
-              </Link>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">İlan bulunamadı</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Seçilen filtrelere uygun ilan bulunmuyor.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {filteredJobs.map((job) => (
+              <div key={job.id} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="text-lg font-medium text-gray-900">{job.title}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        job.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        job.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {job.status === 'approved' ? 'Onaylı' :
+                         job.status === 'pending' ? 'Bekleyen' :
+                         'Reddedilen'}
+                      </span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        job.isActive ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {job.isActive ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p><strong>Şirket:</strong> {job.company}</p>
+                      <p><strong>Konum:</strong> {job.location}</p>
+                      <p><strong>Maaş:</strong> {job.salary}</p>
+                      <p><strong>Başvuru Sayısı:</strong> {Array.isArray(job.applicants) ? job.applicants.length : 0}</p>
+                      <p><strong>Oluşturulma:</strong> {new Date(job.createdAt).toLocaleDateString('tr-TR')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="ml-4 flex flex-col space-y-2">
+                    {/* Onay Durumu Butonları */}
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleStatusUpdate(job.id, 'approved')}
+                        disabled={actionLoading === job.id || job.status === 'approved'}
+                        className={`px-3 py-1 text-xs rounded-md ${
+                          job.status === 'approved' 
+                            ? 'bg-green-100 text-green-800 cursor-not-allowed' 
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        } disabled:opacity-50`}
+                      >
+                        Onayla
+                      </button>
+                      <button
+                        onClick={() => handleStatusUpdate(job.id, 'rejected')}
+                        disabled={actionLoading === job.id || job.status === 'rejected'}
+                        className={`px-3 py-1 text-xs rounded-md ${
+                          job.status === 'rejected' 
+                            ? 'bg-red-100 text-red-800 cursor-not-allowed' 
+                            : 'bg-red-600 text-white hover:bg-red-700'
+                        } disabled:opacity-50`}
+                      >
+                        Reddet
+                      </button>
+                      <button
+                        onClick={() => handleStatusUpdate(job.id, 'pending')}
+                        disabled={actionLoading === job.id || job.status === 'pending'}
+                        className={`px-3 py-1 text-xs rounded-md ${
+                          job.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed' 
+                            : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                        } disabled:opacity-50`}
+                      >
+                        Beklet
+                      </button>
+                    </div>
+                    
+
+                    
+                    {/* Silme Butonu */}
+                    <button
+                      onClick={() => handleDelete(job.id)}
+                      disabled={actionLoading === job.id}
+                      className="px-2 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
+                      title="İlanı Sil"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                    
+                    {actionLoading === job.id && (
+                      <div className="text-xs text-gray-500">İşleniyor...</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Dialog Modal */}
+      {showDialog && dialogAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              {dialogAction.type === 'approve' && 'İlanı Onayla'}
+              {dialogAction.type === 'reject' && 'İlanı Reddet'}
+              {dialogAction.type === 'pending' && 'İlanı Beklemede Tut'}
+              {dialogAction.type === 'delete' && 'İlanı Sil'}
+            </h3>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              <strong>"{dialogAction.jobTitle}"</strong> ilanını{' '}
+              {dialogAction.type === 'approve' && 'onaylamak'}
+              {dialogAction.type === 'reject' && 'reddetmek'}
+              {dialogAction.type === 'pending' && 'beklemede tutmak'}
+              {dialogAction.type === 'delete' && 'kalıcı olarak silmek'}
+              {' '}istediğinizden emin misiniz?
+            </p>
+
+            <div className="flex space-x-3 justify-end">
               <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                onClick={closeDialog}
+                disabled={actionLoading === dialogAction.jobId}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
               >
-                Çıkış Yap
+                İptal
+              </button>
+              <button
+                onClick={confirmAction}
+                disabled={actionLoading === dialogAction.jobId}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 ${
+                  dialogAction.type === 'approve' ? 'bg-green-600 hover:bg-green-700' :
+                  dialogAction.type === 'reject' ? 'bg-red-600 hover:bg-red-700' :
+                  dialogAction.type === 'pending' ? 'bg-yellow-600 hover:bg-yellow-700' :
+                  'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {actionLoading === dialogAction.jobId ? 'İşleniyor...' : 
+                 dialogAction.type === 'approve' ? 'Onayla' :
+                 dialogAction.type === 'reject' ? 'Reddet' :
+                 dialogAction.type === 'pending' ? 'Beklet' :
+                 'Sil'}
               </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tab menü */}
-        <div className="border-b border-gray-200 mb-8">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`${
-                activeTab === 'dashboard'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`${
-                activeTab === 'users'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Kullanıcılar
-            </button>
-            <button
-              onClick={() => setActiveTab('jobs')}
-              className={`${
-                activeTab === 'jobs'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              İş İlanları
-            </button>
-          </nav>
+      {/* Delete Dialog */}
+      {showDeleteDialog && jobToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              İlanı Sil
+            </h3>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              <strong>"{jobToDelete.title}"</strong> ilanını kalıcı olarak silmek istediğinizden emin misiniz?
+            </p>
+
+            <div className="flex space-x-3 justify-end">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => {
+                  handleDelete(jobToDelete.id);
+                  setShowDeleteDialog(false);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
+              >
+                Sil
+              </button>
+            </div>
+          </div>
         </div>
-
-        {/* Dashboard içeriği */}
-        {activeTab === 'dashboard' && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Genel Bakış</h2>
-            
-            {/* İstatistik kartları */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Toplam Kullanıcı</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{users.length}</dd>
-                  </dl>
-                </div>
-                <div className="bg-gray-50 px-4 py-4 sm:px-6">
-                  <div className="text-sm">
-                    <span className="font-medium text-blue-600">
-                      {users.filter(u => u.userType === 'jobseeker').length} İş Arayan, 
-                      {' '}{users.filter(u => u.userType === 'employer').length} İşveren
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Toplam İlan</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{jobs.length}</dd>
-                  </dl>
-                </div>
-                <div className="bg-gray-50 px-4 py-4 sm:px-6">
-                  <div className="text-sm">
-                    <span className="font-medium text-blue-600">
-                      {jobs.filter(j => j.status === 'active').length} Aktif, 
-                      {' '}{jobs.filter(j => j.status === 'pending').length} Beklemede
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Başvurular</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                      {jobs.reduce((total, job) => total + (job.applicants?.length || 0), 0)}
-                    </dd>
-                  </dl>
-                </div>
-                <div className="bg-gray-50 px-4 py-4 sm:px-6">
-                  <div className="text-sm">
-                    <span className="font-medium text-blue-600">
-                      Toplam başvuru sayısı
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Ortalama Başvuru</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                      {jobs.length ? (jobs.reduce((total, job) => total + (job.applicants?.length || 0), 0) / jobs.length).toFixed(1) : 0}
-                    </dd>
-                  </dl>
-                </div>
-                <div className="bg-gray-50 px-4 py-4 sm:px-6">
-                  <div className="text-sm">
-                    <span className="font-medium text-blue-600">İlan başına ortalama başvuru</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Son aktiviteler */}
-            <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
-              <div className="px-4 py-5 sm:px-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Son Eklenen İlanlar</h3>
-              </div>
-              <div className="border-t border-gray-200 divide-y divide-gray-200">
-                {jobs.slice(0, 5).map(job => (
-                  <div key={job.id} className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-blue-600 truncate">{job.title}</p>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {job.status === 'active' ? 'Aktif' : job.status === 'pending' ? 'Beklemede' : 'Reddedildi'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          {job.company}
-                        </p>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <p>
-                          {new Date(job.createdAt).toLocaleDateString('tr-TR')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Kullanıcılar sekmesi */}
-        {activeTab === 'users' && (
-          <div>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">Kullanıcı Yönetimi</h2>
-              <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Kullanıcı ara..."
-                  className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                />
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as any)}
-                  className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">Tüm Kullanıcılar</option>
-                  <option value="jobseeker">İş Arayanlar</option>
-                  <option value="employer">İşverenler</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <li key={user.id}>
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-600 truncate">
-                            {user.email}
-                          </p>
-                          <div className="mt-1 flex items-center text-sm text-gray-500">
-                            <span className="capitalize bg-gray-100 px-2 py-1 rounded-full text-xs">
-                              {user.userType === 'jobseeker' ? 'İş Arayan' : 
-                               user.userType === 'employer' ? 'İşveren' : 'Admin'}
-                            </span>
-                            <span className="mx-2">•</span>
-                            <span>
-                              {new Date(user.createdAt).toLocaleDateString('tr-TR')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-4 flex-shrink-0">
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Sil
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {/* İş İlanları sekmesi */}
-        {activeTab === 'jobs' && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">İş İlanları</h2>
-            
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {jobs.map((job) => (
-                  <li key={job.id}>
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-600 truncate">
-                            {job.title}
-                          </p>
-                          <div className="mt-1 flex items-center text-sm text-gray-500">
-                            <span>{job.company}</span>
-                            <span className="mx-2">•</span>
-                            <span>{job.applicants.length} başvuru</span>
-                            <span className="mx-2">•</span>
-                            <span>
-                              {new Date(job.createdAt).toLocaleDateString('tr-TR')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-4 flex-shrink-0 flex space-x-4">
-                          <select
-                            value={job.status}
-                            onChange={(e) => handleUpdateJobStatus(job.id, e.target.value as Job['status'])}
-                            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="active">Aktif</option>
-                            <option value="pending">Onay Bekliyor</option>
-                            <option value="rejected">Reddedildi</option>
-                          </select>
-                          <button
-                            onClick={() => handleDeleteJob(job.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Sil
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
+    </>
   );
 } 

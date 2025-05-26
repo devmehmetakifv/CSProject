@@ -33,6 +33,7 @@ export default function NewJob() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [districts, setDistricts] = useState<string[]>([]);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   
   const cities = getCities();
   
@@ -104,10 +105,16 @@ export default function NewJob() {
         employerId: user.uid,
         createdAt: new Date().toISOString(),
         applicants: [],
+        status: 'pending', // Admin onayı bekliyor
+        isActive: true, // Varsayılan olarak aktif
       };
 
       await addDoc(collection(db, 'jobs'), jobData);
-      navigate('/employer/dashboard');
+      setShowSuccessDialog(true);
+      setTimeout(() => {
+        setShowSuccessDialog(false);
+        navigate('/employer/dashboard');
+      }, 2000);
     } catch (error) {
       console.error('Error creating job:', error);
       alert('İlan oluşturulurken bir hata oluştu.');
@@ -118,6 +125,23 @@ export default function NewJob() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {showSuccessDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <div className="flex items-center justify-center mb-4">
+              <svg className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+              İş İlanı Başarıyla Oluşturuldu!
+            </h3>
+            <p className="text-sm text-gray-600 text-center">
+              İlanınız admin onayından sonra yayınlanacaktır.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="md:flex md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">

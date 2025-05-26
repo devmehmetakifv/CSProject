@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth';
+import { StoreProvider } from './context/StoreContext';
 import Navbar from './components/Navbar';
 import Logo from './components/Logo';
 
@@ -21,10 +22,12 @@ import Applicants from './pages/Applicants';
 
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
 
 import BlogDetail from './components/BlogDetail';
-import CategoryList from './components/CategoryList';
-import Authors from './components/Authors';
+import Team from './pages/Team';
+import Visitors from './pages/Visitors';
+import { Notifications } from './pages/Notifications';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -104,9 +107,15 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <AuthProvider>
-        <AppLayout>
+        <StoreProvider>
+          <AppLayout>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
@@ -130,6 +139,14 @@ const App: React.FC = () => {
               element={
                 <PrivateRoute allowedUserTypes={['jobseeker']}>
                   <MyApplications />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/notifications" 
+              element={
+                <PrivateRoute allowedUserTypes={['employer']}>
+                  <Notifications />
                 </PrivateRoute>
               } 
             />
@@ -179,19 +196,20 @@ const App: React.FC = () => {
             {/* Admin Routes */}
             <Route 
               path="/admin/dashboard" 
-              element={
-                <PrivateRoute allowedUserTypes={['admin']}>
-                  <AdminDashboard />
-                </PrivateRoute>
-              } 
+              element={<AdminDashboard />} 
+            />
+            <Route 
+              path="/admin/users" 
+              element={<AdminUsers />} 
             />
 
             {/* Blog Routes */}
             <Route path="/blogs/:slug" element={<BlogDetail />} />
-            <Route path="/categories" element={<CategoryList />} />
-            <Route path="/authors" element={<Authors />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/visitors" element={<Visitors />} />
           </Routes>
         </AppLayout>
+        </StoreProvider>
       </AuthProvider>
     </Router>
   );
